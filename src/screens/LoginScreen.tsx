@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+const REMEMBER_KEY = 'taskmgr_remember_user';
+
 type Props = NativeStackScreenProps<any, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
@@ -22,6 +24,16 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { signIn } = useAuth();
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY);
+      if (saved) {
+        setUsername(saved);
+        setRememberMe(true);
+      }
+    } catch {}
+  }, []);
 
   async function handleLogin() {
     if (!username || !password) {
@@ -35,6 +47,14 @@ export default function LoginScreen({ navigation }: Props) {
 
     if (error) {
       window.alert(error);
+    } else {
+      try {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_KEY, username);
+        } else {
+          localStorage.removeItem(REMEMBER_KEY);
+        }
+      } catch {}
     }
   }
 
@@ -94,21 +114,15 @@ export default function LoginScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.optionsRow}>
-              <TouchableOpacity
-                style={styles.rememberRow}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
-                </View>
-                <Text style={styles.rememberText}>Recordarme</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity>
-                <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.rememberRow}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.rememberText}>Recordarme</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -223,15 +237,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 22,
-  },
   rememberRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 22,
   },
   checkbox: {
     width: 18,
@@ -251,11 +260,6 @@ const styles = StyleSheet.create({
   rememberText: {
     fontSize: 13,
     color: '#6B7280',
-  },
-  forgotText: {
-    fontSize: 13,
-    color: '#008F4C',
-    fontWeight: '500',
   },
   button: {
     backgroundColor: '#008F4C',

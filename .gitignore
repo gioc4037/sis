@@ -1,5 +1,4 @@
 # Environment secrets - NEVER commit
-src/config/env.ts
 .env
 .env.local
 *.log
