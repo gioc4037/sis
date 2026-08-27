@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx expo export --platform web && node postbuild.js",
+  "buildCommand": "node build-env.js && npx expo export --platform web && node postbuild.js",
   "outputDirectory": "dist",
   "framework": null
 }
