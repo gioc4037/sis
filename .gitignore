@@ -1,5 +1,8 @@
-# env.ts is safe to commit (Supabase anon key is public by design)
-# src/config/env.ts
+# Environment secrets - NEVER commit
+src/config/env.ts
+.env
+.env.local
+*.log
 node_modules/
 .expo/
 dist/
