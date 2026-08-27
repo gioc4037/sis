@@ -1,5 +1,5 @@
-# NUNCA subas env.ts a repositorios publicos
-src/config/env.ts
+# env.ts is safe to commit (Supabase anon key is public by design)
+# src/config/env.ts
 node_modules/
 .expo/
 dist/
