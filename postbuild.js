@@ -24,4 +24,14 @@ fs.writeFileSync(indexPath, html);
 fs.copyFileSync(path.join(__dirname, 'web', 'manifest.json'), path.join(distDir, 'manifest.json'));
 fs.copyFileSync(path.join(__dirname, 'web', 'service-worker.js'), path.join(distDir, 'service-worker.js'));
 
+// Copy assets/icon.png to dist/assets/
+const distAssetsDir = path.join(distDir, 'assets');
+if (!fs.existsSync(distAssetsDir)) {
+  fs.mkdirSync(distAssetsDir, { recursive: true });
+}
+const iconSrc = path.join(__dirname, 'assets', 'icon.png');
+if (fs.existsSync(iconSrc)) {
+  fs.copyFileSync(iconSrc, path.join(distAssetsDir, 'icon.png'));
+}
+
 console.log('PWA assets injected into dist/');

@@ -30,6 +30,11 @@ export default function SupervisorDashboard({ navigation }: Props) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [usersModalVisible, setUsersModalVisible] = useState(false);
+  const [resetModalVisible, setResetModalVisible] = useState(false);
+  const [resetTargetUser, setResetTargetUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -90,6 +95,43 @@ export default function SupervisorDashboard({ navigation }: Props) {
     }
   }
 
+  async function handleResetPassword() {
+    if (!resetTargetUser || !newPassword) {
+      window.alert('Completa la nueva contraseña');
+      return;
+    }
+    if (newPassword.length < 6) {
+      window.alert('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${supabase.supabaseUrl}/functions/v1/reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+            apikey: supabase.supabaseKey,
+          },
+          body: JSON.stringify({ user_id: resetTargetUser.id, new_password: newPassword }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Error al actualizar contraseña');
+      window.alert(`Contraseña de ${resetTargetUser.full_name} actualizada`);
+      setResetModalVisible(false);
+      setResetTargetUser(null);
+      setNewPassword('');
+    } catch (error: any) {
+      window.alert(error.message);
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   function getStatusColor(status: string) {
     switch (status) {
       case 'pending': return '#D97706';
@@ -137,6 +179,10 @@ export default function SupervisorDashboard({ navigation }: Props) {
               <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuOpen(false); setModalVisible(true); }}>
                 <Ionicons name="add-circle-outline" size={16} color="#008F4C" />
                 <Text style={styles.menuItemText}>Crear tarea</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuOpen(false); setUsersModalVisible(true); }}>
+                <Ionicons name="people-outline" size={16} color="#008F4C" />
+                <Text style={styles.menuItemText}>Gestionar usuarios</Text>
               </TouchableOpacity>
               <View style={styles.menuDivider} />
               <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuOpen(false); signOut(); }}>
@@ -345,6 +391,84 @@ export default function SupervisorDashboard({ navigation }: Props) {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={usersModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <View style={styles.usersModalHeader}>
+                <Text style={styles.modalTitle}>Usuarios</Text>
+                <TouchableOpacity onPress={() => setUsersModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              {users.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#9CA3AF', padding: 20 }}>No hay usuarios registrados</Text>
+              ) : (
+                users.map((u) => (
+                  <View key={u.id} style={styles.userManageCard}>
+                    <View style={styles.userManageInfo}>
+                      <View style={styles.userManageAvatar}>
+                        <Text style={styles.userManageAvatarText}>{u.full_name.charAt(0).toUpperCase()}</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.userManageName}>{u.full_name}</Text>
+                        <Text style={styles.userManageUsername}>@{u.username}</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.resetPasswordBtn}
+                      onPress={() => { setResetTargetUser(u); setNewPassword(''); setResetModalVisible(true); }}
+                    >
+                      <Ionicons name="key-outline" size={16} color="#008F4C" />
+                      <Text style={styles.resetPasswordBtnText}>Contraseña</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={resetModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.usersModalHeader}>
+              <Text style={styles.modalTitle}>Resetear contraseña</Text>
+              <TouchableOpacity onPress={() => setResetModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            {resetTargetUser && (
+              <View style={styles.resetUserInfo}>
+                <Text style={styles.resetUserName}>{resetTargetUser.full_name}</Text>
+                <Text style={styles.resetUserUsername}>@{resetTargetUser.username}</Text>
+              </View>
+            )}
+            <Text style={styles.label}>Nueva contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Minimo 6 caracteres"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setResetModalVisible(false)}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalAssignBtn, resetLoading && styles.buttonDisabled]}
+                onPress={handleResetPassword}
+                disabled={resetLoading}
+              >
+                <Text style={styles.modalAssignBtnText}>{resetLoading ? 'Actualizando...' : 'Actualizar'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -606,4 +730,41 @@ const styles = StyleSheet.create({
   modalAssignBtn: { flex: 1, backgroundColor: '#008F4C', borderRadius: 10, padding: 14, alignItems: 'center' },
   modalAssignBtnText: { color: '#fff', fontWeight: '600' },
   buttonDisabled: { opacity: 0.6 },
+  usersModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  userManageCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  userManageInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  userManageAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  userManageAvatarText: { fontSize: 15, fontWeight: '700', color: '#008F4C' },
+  userManageName: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  userManageUsername: { fontSize: 12, color: '#9CA3AF' },
+  resetPasswordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  resetPasswordBtnText: { fontSize: 12, fontWeight: '600', color: '#008F4C', marginLeft: 4 },
+  resetUserInfo: { backgroundColor: '#F9FAFB', borderRadius: 10, padding: 14, marginBottom: 16, alignItems: 'center' },
+  resetUserName: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  resetUserUsername: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
 });
